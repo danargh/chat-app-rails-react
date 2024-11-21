@@ -1,16 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import ActionCable from 'actioncable';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import createCable from '../hook/actionCable';
 
 interface ChatMessage {
    username: string;
    content: string;
 }
 
-const useChatWebSocket = (setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>) => {
+const ChatApp: React.FC = () => {
+   const [messages, setMessages] = useState<ChatMessage[]>([]);
+   const [newMessage, setNewMessage] = useState<string>('');
+   const [username, setUsername] = useState<string>('');
+   const cableRef = useRef<any>(null);
+   const subscriptionRef = useRef<any>(null);
+
+   // Fetch message history once on mount
    useEffect(() => {
-      const cable = ActionCable.createConsumer('ws://localhost:3000/cable');
-      const chatSubscription = cable.subscriptions.create(
+      const fetchMessages = async () => {
+         try {
+            const response = await axios.get<ChatMessage[]>('http://localhost:3000/messages');
+            setMessages(response.data);
+         } catch (error) {
+            console.error('Error fetching message history: ', error);
+         }
+      };
+
+      fetchMessages();
+   }, []);
+
+   // Setup Action Cable connection and subscription
+   useEffect(() => {
+      // Create a cable connection once
+      cableRef.current = createCable();
+
+      // Subscribe to the ChatChannel
+      subscriptionRef.current = cableRef.current.subscriptions.create(
          { channel: 'ChatChannel' },
          {
             connected() {
@@ -32,47 +56,16 @@ const useChatWebSocket = (setMessages: React.Dispatch<React.SetStateAction<ChatM
       );
 
       return () => {
-         chatSubscription.unsubscribe();
-         cable.disconnect();
+         // Clean up subscription and disconnect cable on unmount
+         if (subscriptionRef.current) subscriptionRef.current.unsubscribe();
+         if (cableRef.current) cableRef.current.disconnect();
       };
-   }, [setMessages]);
-};
+   }, []); // Empty dependency array ensures this runs only once
 
-const ChatApp: React.FC = () => {
-   const [messages, setMessages] = useState<ChatMessage[]>([]);
-   const [newMessage, setNewMessage] = useState<string>('');
-   const [username, setUsername] = useState<string>('');
-   const [subscription, setSubscription] = useState<any | null>(null);
-
-   useEffect(() => {
-      const fetchMessages = async () => {
-         try {
-            const response = await axios.get<ChatMessage[]>('http://localhost:3000/messages');
-            setMessages(response.data);
-         } catch (error) {
-            console.error('Error fetching message history: ', error);
-         }
-      };
-
-      fetchMessages();
-   }, []);
-
-   useChatWebSocket(setMessages);
-
-   useEffect(() => {
-      const cable = ActionCable.createConsumer('ws://localhost:3000/cable');
-      const chatSubscription = cable.subscriptions.create({ channel: 'ChatChannel' });
-
-      setSubscription(chatSubscription);
-
-      return () => {
-         cable.disconnect();
-      };
-   }, []);
-
+   // Function to send a new message
    const sendMessage = () => {
-      if (subscription && username.trim() && newMessage.trim()) {
-         subscription.perform('speak', {
+      if (subscriptionRef.current && username.trim() && newMessage.trim()) {
+         subscriptionRef.current.perform('speak', {
             username: username.trim(),
             content: newMessage.trim(),
          });
