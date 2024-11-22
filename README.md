@@ -11,3 +11,7 @@ OR
 Start both (as foreman is installed): `foreman start`
 
 Build for production: `npm run build`
+
+## Result Screenshoot
+
+![realtime chat app with ruby](image.png)
