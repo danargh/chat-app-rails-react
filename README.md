@@ -1,8 +1,12 @@
 # Mono Repo Ruby On Rails + React with Vite
 
-Start backend: `rails s`
+Install react dependency: `npm install`
 
-Start frontend: `npm run dev`
+Install ruby on rails dependency: `bundle install`
+
+Start backend: `rails s` & Start frontend: `npm run dev`
+
+OR
 
 Start both (as foreman is installed): `foreman start`
 
