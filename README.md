@@ -1,4 +1,4 @@
-# Mono Repo Ruby On Rails + React with Vite
+# Mono Repo Ruby On Rails + React with Vite + Sqlite3
 
 Install react dependency: `npm install`
 
